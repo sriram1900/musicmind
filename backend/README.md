@@ -24,6 +24,7 @@ This is the backend server for the Music Mind application, utilizing the Spotify
    node server.js
    ```
 
+
 ## API Endpoints
 - **GET /login**: Initiates Spotify OAuth flow.
 - **GET /callback**: Handles the callback from Spotify and retrieves the access token.
