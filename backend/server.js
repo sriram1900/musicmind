@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 8888;
 // Sanitize Envs
 const CLIENT_ID = (process.env.CLIENT_ID || '').trim();
 const CLIENT_SECRET = (process.env.CLIENT_SECRET || '').trim();
-const REDIRECT_URI = (process.env.REDIRECT_URI || '').trim();
+const REDIRECT_URI = (process.env.REDIRECT_URI || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/callback` : '')).trim();
 
 // Diagnostics Log
 console.log('--- SERVER CONFIG ---');
@@ -44,8 +44,12 @@ app.use(cookieSession({
     sameSite: 'lax'
 }));
 
+// Ensure FRONTEND_URL has protocol (Render provides 'host' property without https://)
+const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const frontendUrl = rawFrontendUrl.startsWith('http') ? rawFrontendUrl : `https://${rawFrontendUrl}`;
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: frontendUrl,
     credentials: true
 }));
 app.use(express.json());

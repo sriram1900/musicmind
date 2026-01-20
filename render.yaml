@@ -16,7 +16,7 @@ services:
         fromService:
           type: web
           name: musicmind-frontend
-          property: url
+          property: host
       - key: REDIRECT_URI
         fromService:
           type: web
