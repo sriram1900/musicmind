@@ -26,7 +26,7 @@ services:
           value: /callback 
 
   # Frontend Service (Static Site)
-  - type: static
+  - type: web
     name: musicmind-frontend
     env: static
     root: frontend
