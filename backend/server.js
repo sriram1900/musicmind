@@ -170,12 +170,29 @@ app.get('/callback', async (req, res) => {
 
     } catch (err) {
         console.error('Login Callback Error:', err.message);
-        if (err.response) {
-            console.error('Spotify Response:', err.response.data);
-            res.send(`Spotify Auth Error: ${JSON.stringify(err.response.data)}`);
-        } else {
-            res.send(`Auth Error: ${err.message}`);
-        }
+        const debugInfo = {
+            message: 'Spotify Auth Failed',
+            error: err.response?.data || err.message,
+            debug: {
+                used_redirect_uri: REDIRECT_URI,
+                used_client_id: CLIENT_ID ? `${CLIENT_ID.substring(0, 5)}...` : 'MISSING',
+                grant_type: 'authorization_code'
+            }
+        };
+
+        // Return clear HTML error for browser
+        res.status(500).send(`
+            <div style="font-family: monospace; background: #f0f0f0; padding: 20px;">
+                <h2 style="color: #d32f2f;">Authentication Error</h2>
+                <p><strong>Spotify Message:</strong> ${JSON.stringify(err.response?.data || err.message)}</p>
+                <hr/>
+                <h3>Debug Info (Check your Dashboard)</h3>
+                <p><strong>Redirect URI sent to Spotify:</strong> <br/><code>${REDIRECT_URI}</code></p>
+                <p><strong>Client ID:</strong> ${CLIENT_ID}</p>
+                <hr/>
+                <p><em>Make sure the Redirect URI above EXACTLY matches what is in your Spotify Developer Dashboard.</em></p>
+            </div>
+        `);
     }
 });
 
