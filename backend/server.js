@@ -25,7 +25,13 @@ const PORT = process.env.PORT || 8888;
 // Sanitize Envs
 const CLIENT_ID = (process.env.CLIENT_ID || process.env.SPOTIFY_CLIENT_ID || '').trim();
 const CLIENT_SECRET = (process.env.CLIENT_SECRET || process.env.SPOTIFY_CLIENT_SECRET || '').trim();
-const REDIRECT_URI = (process.env.REDIRECT_URI || process.env.SPOTIFY_REDIRECT_URI || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/callback` : '')).trim();
+let REDIRECT_URI = (process.env.REDIRECT_URI || process.env.SPOTIFY_REDIRECT_URI || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/callback` : '')).trim();
+
+// Auto-fix common configuration error: missing /callback
+if (REDIRECT_URI && !REDIRECT_URI.endsWith('/callback')) {
+    console.log(`[WARN] REDIRECT_URI '${REDIRECT_URI}' seems to be missing '/callback'. Appending it automatically.`);
+    REDIRECT_URI = `${REDIRECT_URI}/callback`;
+}
 
 // Diagnostics Log
 console.log('--- SERVER CONFIG ---');
@@ -105,7 +111,15 @@ app.get('/login', (req, res) => {
 
     if (!CLIENT_ID) {
         console.error('CRITICAL: CLIENT_ID is missing in server environment.');
-        return res.status(500).send('Server Configuration Error: Missing SPOTIFY_CLIENT_ID');
+        return res.status(500).send(`
+            <h1>Server Configuration Error</h1>
+            <p><strong>Missing Client ID:</strong> The <code>SPOTIFY_CLIENT_ID</code> environment variable is not set.</p>
+            <p>Please check your Render Dashboard > Environment.</p>
+        `);
+    }
+
+    if (!REDIRECT_URI) {
+        return res.status(500).send('<h1>Server Configuration Error</h1><p>Missing REDIRECT_URI.</p>');
     }
 
     const scope = 'user-read-private user-read-email user-top-read';
