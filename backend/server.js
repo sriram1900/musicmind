@@ -188,7 +188,7 @@ app.get('/logout', async (req, res) => {
         console.log('🧹 Cache Cleared for Session');
     }
     req.session = null;
-    res.redirect('/');
+    res.redirect(frontendUrl);
 });
 
 // Aliases
