@@ -36,6 +36,7 @@ if (REDIRECT_URI && !REDIRECT_URI.endsWith('/callback')) {
 // Diagnostics Log
 console.log('--- SERVER CONFIG ---');
 console.log(`CLIENT_ID: ${CLIENT_ID ? 'Set (Length ' + CLIENT_ID.length + ')' : 'MISSING'}`);
+console.log(`CLIENT_SECRET: ${CLIENT_SECRET ? 'Set (Length ' + CLIENT_SECRET.length + ')' : 'MISSING'}`);
 console.log(`REDIRECT_URI: ${REDIRECT_URI || 'MISSING'}`);
 console.log('---------------------');
 
@@ -172,27 +173,27 @@ app.get('/callback', async (req, res) => {
 
     } catch (err) {
         console.error('Login Callback Error:', err.message);
-        const debugInfo = {
-            message: 'Spotify Auth Failed',
-            error: err.response?.data || err.message,
-            debug: {
-                used_redirect_uri: REDIRECT_URI,
-                used_client_id: CLIENT_ID ? `${CLIENT_ID.substring(0, 5)}...` : 'MISSING',
-                grant_type: 'authorization_code'
-            }
-        };
+
+        const errorData = err.response?.data || err.message;
+        const statusCode = err.response?.status || 500;
+        const headers = err.response?.headers || {};
+
+        console.error(`Status: ${statusCode}`);
+        console.error(`Headers:`, JSON.stringify(headers));
+        console.error(`Data:`, JSON.stringify(errorData));
 
         // Return clear HTML error for browser
         res.status(500).send(`
             <div style="font-family: monospace; background: #f0f0f0; padding: 20px;">
-                <h2 style="color: #d32f2f;">Authentication Error</h2>
-                <p><strong>Spotify Message:</strong> ${JSON.stringify(err.response?.data || err.message)}</p>
+                <h2 style="color: #d32f2f;">Authentication Error (${statusCode})</h2>
+                <p><strong>Spotify Message:</strong> ${JSON.stringify(errorData)}</p>
                 <hr/>
                 <h3>Debug Info (Check your Dashboard)</h3>
                 <p><strong>Redirect URI sent to Spotify:</strong> <br/><code>${REDIRECT_URI}</code></p>
                 <p><strong>Client ID:</strong> ${CLIENT_ID}</p>
+                 <p><strong>Client Secret Length:</strong> ${CLIENT_SECRET ? CLIENT_SECRET.length : 0} (Should be 32)</p>
                 <hr/>
-                <p><em>Make sure the Redirect URI above EXACTLY matches what is in your Spotify Developer Dashboard.</em></p>
+                <p><em>Check the Secret Length. If it is 0 or not 32, your Render Environment Variable is wrong.</em></p>
             </div>
         `);
     }
@@ -363,6 +364,8 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
  *                 status:
  *                   type: string
  *                 message:
+ *                   type: string
+ *                 error:
  *                   type: string
  */
 app.post('/api/recommend/generate', checkAuth, async (req, res) => {
