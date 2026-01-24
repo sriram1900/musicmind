@@ -36,6 +36,7 @@ if (REDIRECT_URI && !REDIRECT_URI.endsWith('/callback')) {
 // Diagnostics Log
 console.log('--- SERVER CONFIG ---');
 console.log(`CLIENT_ID: ${CLIENT_ID ? 'Set (Length ' + CLIENT_ID.length + ')' : 'MISSING'}`);
+console.log(`CLIENT_SECRET: ${CLIENT_SECRET ? 'Set (Length ' + CLIENT_SECRET.length + ')' : 'MISSING'}`);
 console.log(`REDIRECT_URI: ${REDIRECT_URI || 'MISSING'}`);
 console.log('---------------------');
 
@@ -142,12 +143,14 @@ app.get('/callback', async (req, res) => {
         params.append('grant_type', 'authorization_code');
         params.append('code', code);
         params.append('redirect_uri', REDIRECT_URI);
-        params.append('client_id', CLIENT_ID);
-        params.append('client_secret', CLIENT_SECRET);
+        // Client ID/Secret removed from body, using Basic Auth header instead
+
+        const authString = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
 
         const response = await axios.post('https://accounts.spotify.com/api/token', params, {
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Basic ${authString}`
             }
         });
 
@@ -166,16 +169,34 @@ app.get('/callback', async (req, res) => {
         req.session.refresh_token = refresh_token;
         req.session.expires_at = Date.now() + (expires_in * 1000) - 60000;
 
-        res.redirect('http://localhost:5173/dashboard?login=success');
+        res.redirect(`${frontendUrl}/dashboard?login=success`);
+
 
     } catch (err) {
         console.error('Login Callback Error:', err.message);
-        if (err.response) {
-            console.error('Spotify Response:', err.response.data);
-            res.send(`Spotify Auth Error: ${JSON.stringify(err.response.data)}`);
-        } else {
-            res.send(`Auth Error: ${err.message}`);
-        }
+
+        const errorData = err.response?.data || err.message;
+        const statusCode = err.response?.status || 500;
+        const headers = err.response?.headers || {};
+
+        console.error(`Status: ${statusCode}`);
+        console.error(`Headers:`, JSON.stringify(headers));
+        console.error(`Data:`, JSON.stringify(errorData));
+
+        // Return clear HTML error for browser
+        res.status(500).send(`
+            <div style="font-family: monospace; background: #f0f0f0; padding: 20px;">
+                <h2 style="color: #d32f2f;">Authentication Error (${statusCode})</h2>
+                <p><strong>Spotify Message:</strong> ${JSON.stringify(errorData)}</p>
+                <hr/>
+                <h3>Debug Info (Check your Dashboard)</h3>
+                <p><strong>Redirect URI sent to Spotify:</strong> <br/><code>${REDIRECT_URI}</code></p>
+                <p><strong>Client ID:</strong> ${CLIENT_ID}</p>
+                 <p><strong>Client Secret Length:</strong> ${CLIENT_SECRET ? CLIENT_SECRET.length : 0} (Should be 32)</p>
+                <hr/>
+                <p><em>Check the Secret Length. If it is 0 or not 32, your Render Environment Variable is wrong.</em></p>
+            </div>
+        `);
     }
 });
 
@@ -344,6 +365,8 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
  *                 status:
  *                   type: string
  *                 message:
+ *                   type: string
+ *                 error:
  *                   type: string
  */
 app.post('/api/recommend/generate', checkAuth, async (req, res) => {
