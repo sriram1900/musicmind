@@ -1,0 +1,15 @@
+[
+  {
+    "track_id": "spotify_track_id",
+    "track_name": "Blinding Lights",
+    "artist_id": "spotify_artist_id",
+    "artist_name": "The Weeknd",
+    "genres": ["pop", "synthwave"],
+    "audio_features": {
+      "danceability": 0.64,
+      "energy": 0.78,
+      "valence": 0.52,
+      "tempo": 171
+    }
+  }
+]
