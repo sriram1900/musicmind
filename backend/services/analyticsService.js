@@ -1,52 +1,76 @@
 const db = require('../db');
 
 /**
- * Save computed analytics for a user
- * @param {string} userId - Spotify User ID
- * @param {Object} analytics - { topGenres: [], moodScore: number }
+ * Compute analytics for a user from pipeline tables
+ * Uses: user_history, song_artists, artist_genres
+ */
+async function computeAnalytics(userId) {
+  // 1. Top Genres
+  const topGenresQuery = `
+    SELECT g.genre, COUNT(*) AS count
+    FROM user_history uh
+    JOIN song_artists sa ON uh.song_id = sa.song_id
+    JOIN artist_genres ag ON sa.artist_id = ag.artist_id
+    JOIN genres g ON ag.genre = g.genre
+    WHERE uh.user_id = $1
+    GROUP BY g.genre
+    ORDER BY count DESC
+    LIMIT 5;
+  `;
+
+  const topGenresRes = await db.query(topGenresQuery, [userId]);
+  const topGenres = topGenresRes.rows;
+
+  // 2. Mood Score (TEMPORARY simple logic)
+  // Since audio_features are not yet stored in DB,
+  // we compute a neutral score for now.
+  const moodScore = 50;
+
+  return {
+    topGenres,
+    moodScore
+  };
+}
+
+/**
+ * Save analytics snapshot (optional caching)
  */
 async function saveAnalytics(userId, analytics) {
-    const { topGenres, moodScore } = analytics;
+  const { topGenres, moodScore } = analytics;
 
-    // Ensure topGenres is a JSON string or object depending on driver handling. 
-    // pg handles objects for JSONB automatically.
+  const query = `
+    INSERT INTO analytics (user_id, top_genres, mood_score)
+    VALUES ($1, $2, $3)
+    RETURNING *;
+  `;
 
-    const query = `
-        INSERT INTO analytics (user_id, top_genres, mood_score)
-        VALUES ($1, $2, $3)
-        RETURNING *;
-    `;
+  const res = await db.query(query, [
+    userId,
+    JSON.stringify(topGenres),
+    moodScore
+  ]);
 
-    try {
-        const res = await db.query(query, [userId, JSON.stringify(topGenres), moodScore]);
-        return res.rows[0];
-    } catch (err) {
-        console.error('Error saving analytics:', err);
-        throw err;
-    }
+  return res.rows[0];
 }
 
 /**
  * Get latest analytics for a user
  */
 async function getLatestAnalytics(userId) {
-    const query = `
-        SELECT * FROM analytics 
-        WHERE user_id = $1 
-        ORDER BY created_at DESC 
-        LIMIT 1;
-    `;
+  const query = `
+    SELECT *
+    FROM analytics
+    WHERE user_id = $1
+    ORDER BY created_at DESC
+    LIMIT 1;
+  `;
 
-    try {
-        const res = await db.query(query, [userId]);
-        return res.rows[0];
-    } catch (err) {
-        console.error('Error fetching analytics:', err);
-        throw err;
-    }
+  const res = await db.query(query, [userId]);
+  return res.rows[0];
 }
 
 module.exports = {
-    saveAnalytics,
-    getLatestAnalytics
+  computeAnalytics,
+  saveAnalytics,
+  getLatestAnalytics
 };
