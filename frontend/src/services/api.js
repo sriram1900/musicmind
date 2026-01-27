@@ -7,16 +7,16 @@ const api = axios.create({
 });
 
 export const getDashboardData = async () => {
-  const res = await api.get('/analytics/dashboard');
+  const res = await api.get('/api/analytics/dashboard')
   return res.data;
 };
 
 export const getInsightsData = async () => {
-  const res = await api.get('/analytics/insights');
+  const res = await api.get('/api/analytics/insights');
   return res.data;
 };
 
 export const getTopSongs = async () => {
-  const res = await api.get('/analytics/top-songs');
+  const res = await api.get('/api/analytics/top-songs');
   return res.data;
 };
