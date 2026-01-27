@@ -1,96 +1,136 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TiltCard from './TiltCard';
+import { getDashboardData } from '../services/api';
 import './Dashboard.css';
 
 const MusicInsightsPage = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    // Mock Data
-    const topSongs = Array(10).fill(null).map((_, i) => ({
-        id: i, title: `Vibe Song ${i + 1}`, artist: `Artist ${i + 1}`, duration: '3:20'
-    }));
+  useEffect(() => {
+    window.scrollTo(0, 0);
 
-    const topGenres = [
-        { name: 'Lo-Fi Hip Hop', percent: 85 },
-        { name: 'Indie Pop', percent: 70 },
-        { name: 'Synthwave', percent: 60 },
-        { name: 'Jazz', percent: 40 },
-        { name: 'Classical', percent: 20 }
-    ];
+    getDashboardData()
+      .then(res => setData(res))
+      .finally(() => setLoading(false));
+  }, []);
 
-    const topArtists = [
-        { id: 1, name: 'The Weeknd' },
-        { id: 2, name: 'Daft Punk' },
-        { id: 3, name: 'Tame Impala' },
-        { id: 4, name: 'Arctic Monkeys' },
-        { id: 5, name: 'Glass Animals' }
-    ];
-
+  if (loading) {
     return (
-        <div className="dashboard-container visible" style={{ paddingTop: '100px' }}>
-            <nav className="glass-panel navbar">
-                <button onClick={() => navigate('/dashboard')} className="back-btn">← Back</button>
-                <h2 className="logo">Music Insights</h2>
-                <div className="user-profile">Music Lover</div>
-            </nav>
-
-            <main className="dashboard-grid" style={{ maxWidth: '1000px', gap: '3rem' }}>
-
-                {/* Section 1: Top Songs */}
-                <TiltCard className="glass-panel section-card" style={{ height: 'auto', minHeight: '400px', position: 'relative', top: '0', marginBottom: '0' }}>
-                    <h3>Top Songs</h3>
-                    <ul className="song-list">
-                        {topSongs.map((song, i) => (
-                            <li key={song.id} className="song-item">
-                                <span className="rank">{i + 1}</span>
-                                <div className="song-info">
-                                    <div className="song-title">{song.title}</div>
-                                    <div className="song-artist">{song.artist}</div>
-                                </div>
-                                <span>{song.duration}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </TiltCard>
-
-                {/* Section 2: Top Genres */}
-                <TiltCard className="glass-panel section-card" style={{ height: 'auto', minHeight: '300px', position: 'relative', top: '0', marginBottom: '0' }}>
-                    <h3>Top Genres</h3>
-                    <div className="genre-bars">
-                        {topGenres.map(g => (
-                            <div key={g.name} className="genre-row">
-                                <span>{g.name}</span>
-                                <div className="progress-bar-bg">
-                                    <div className="progress-bar-fill" style={{ width: `${g.percent}%` }}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </TiltCard>
-
-                {/* Section 3: Top Artists (NEW) */}
-                <TiltCard className="glass-panel section-card" style={{ height: 'auto', minHeight: '300px', position: 'relative', top: '0', marginBottom: '0' }}>
-                    <h3>Top Artists</h3>
-                    <ul className="song-list">
-                        {topArtists.map((artist, i) => (
-                            <li key={artist.id} className="song-item" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
-                                <span className="rank">{i + 1}</span>
-                                <div className="song-info">
-                                    <div className="song-title" style={{ fontSize: '1.2rem' }}>{artist.name}</div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </TiltCard>
-
-            </main>
-        </div>
+      <div className="dashboard-container visible" style={{ paddingTop: '100px' }}>
+        Loading insights...
+      </div>
     );
+  }
+
+  const topTracks = data?.topTracks || [];
+  const genres = data?.genres || [];
+
+  // Derive artists from topTracks (backend does not send artists separately)
+  const artists = [...new Set(topTracks.map(t => t.artist))];
+
+  return (
+    <div className="dashboard-container visible" style={{ paddingTop: '100px' }}>
+      <nav className="glass-panel navbar">
+        <button onClick={() => navigate('/dashboard')} className="back-btn">
+          ← Back
+        </button>
+        <h2 className="logo">Music Insights</h2>
+      </nav>
+
+      <main className="dashboard-grid" style={{ maxWidth: '1000px', gap: '3rem' }}>
+
+        {/* -------- TOP SONGS -------- */}
+        <TiltCard
+          className="glass-panel section-card"
+          style={{ height: 'auto', minHeight: '400px' }}
+        >
+          <h3>Top Songs</h3>
+
+          {topTracks.length === 0 && (
+            <p style={{ textAlign: 'center', opacity: 0.7 }}>
+              No top songs available
+            </p>
+          )}
+
+          <ul className="song-list">
+            {topTracks.map((song, i) => (
+              <li key={i} className="song-item">
+                <span className="rank">{i + 1}</span>
+                <div className="song-info">
+                  <div className="song-title">{song.name}</div>
+                  <div className="song-artist">{song.artist}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </TiltCard>
+
+        {/* -------- TOP GENRES -------- */}
+        <TiltCard
+          className="glass-panel section-card"
+          style={{ height: 'auto', minHeight: '300px' }}
+        >
+          <h3>Top Genres</h3>
+
+          {genres.length === 0 && (
+            <p style={{ textAlign: 'center', opacity: 0.7 }}>
+              No genre data available
+            </p>
+          )}
+
+          <div className="genre-bars">
+            {genres.map(g => (
+              <div key={g.name} className="genre-row">
+                <span>{g.name}</span>
+                <div className="progress-bar-bg">
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${g.percent}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </TiltCard>
+
+        {/* -------- TOP ARTISTS -------- */}
+        <TiltCard
+          className="glass-panel section-card"
+          style={{ height: 'auto', minHeight: '300px' }}
+        >
+          <h3>Top Artists</h3>
+
+          {artists.length === 0 && (
+            <p style={{ textAlign: 'center', opacity: 0.7 }}>
+              No artists available
+            </p>
+          )}
+
+          <ul className="song-list">
+            {artists.map((artist, i) => (
+              <li
+                key={artist}
+                className="song-item"
+                style={{ justifyContent: 'flex-start', gap: '1rem' }}
+              >
+                <span className="rank">{i + 1}</span>
+                <div className="song-info">
+                  <div className="song-title" style={{ fontSize: '1.2rem' }}>
+                    {artist}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </TiltCard>
+
+      </main>
+    </div>
+  );
 };
 
 export default MusicInsightsPage;
