@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState(0);
 
   const { data: dashboardData, loading, error } = useDashboardData();
+  console.log('DASHBOARD COMPONENT DATA:', dashboardData);
+
 
   // ✅ Backend-aligned data
   const genres = dashboardData?.genres || [];
