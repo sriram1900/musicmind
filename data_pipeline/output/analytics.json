@@ -1,0 +1,8 @@
+{
+  "top_genres": [
+    { "genre": "pop", "percentage": 40 }
+  ],
+  "top_artists": [
+    { "artist": "The Weeknd", "count": 15 }
+  ]
+}
