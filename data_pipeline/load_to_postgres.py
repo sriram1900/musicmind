@@ -1,18 +1,23 @@
 import json
 import psycopg2
+import os
+from dotenv import load_dotenv
 
-# ---------- CONNECT ----------
-conn = psycopg2.connect(
-    dbname="musicmind",
-    user="sriram",
-    port="5432"
-)
+# ---------- LOAD ENV ----------
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("❌ DATABASE_URL not found in .env file")
+
+# ---------- CONNECT TO NEON ----------
+conn = psycopg2.connect(DATABASE_URL)
 cursor = conn.cursor()
 
+print("✅ Connected to Neon database")
 
-# INSERT ARTISTS
-
-
+# ---------- INSERT ARTISTS ----------
 with open("normalized_data/artists.json") as f:
     artists = json.load(f)
 
@@ -29,13 +34,10 @@ for artist in artists:
     )
 
 conn.commit()
-print("Artists insertion done.")
+print("✅ Artists insertion done.")
 
 
-
-# INSERT GENRES
-
-
+# ---------- INSERT GENRES ----------
 with open("normalized_data/genres.json") as f:
     genres = json.load(f)
 
@@ -52,13 +54,10 @@ for g in genres:
     )
 
 conn.commit()
-print("Genres insertion done.")
+print("✅ Genres insertion done.")
 
 
-
-# INSERT SONGS
-
-
+# ---------- INSERT SONGS ----------
 with open("normalized_data/songs.json") as f:
     songs = json.load(f)
 
@@ -75,12 +74,10 @@ for song in songs:
     )
 
 conn.commit()
-print("Songs insertion done.")
+print("✅ Songs insertion done.")
 
 
-# INSERT ARTIST_GENRES (RELATIONSHIP)
-
-
+# ---------- INSERT ARTIST_GENRES ----------
 with open("normalized_data/genres.json") as f:
     genres = json.load(f)
 
@@ -98,12 +95,10 @@ for g in genres:
         pairs += 1
 
 conn.commit()
-print("Artist–Genres inserted:", pairs)
+print("✅ Artist–Genres inserted:", pairs)
 
 
-# ENSURE ALL SONG ARTISTS EXIST IN artists TABLE
-
-
+# ---------- ENSURE ALL SONG ARTISTS EXIST ----------
 with open("normalized_data/songs.json") as f:
     songs = json.load(f)
 
@@ -119,12 +114,10 @@ for song in songs:
         )
 
 conn.commit()
-print("Missing artists (from songs) handled.")
+print("✅ Missing artists handled.")
 
 
-
-# INSERT SONG_ARTISTS (RELATIONSHIP)
-
+# ---------- INSERT SONG_ARTISTS ----------
 with open("normalized_data/songs.json") as f:
     songs = json.load(f)
 
@@ -142,12 +135,11 @@ for song in songs:
         pairs += 1
 
 conn.commit()
-print("Song–Artists inserted:", pairs)
+print("✅ Song–Artists inserted:", pairs)
 
 
-# CLOSE CONNECTION
-
+# ---------- CLOSE CONNECTION ----------
 cursor.close()
 conn.close()
 
-print("ETL load_to_postgres completed successfully.")
+print("🎉 ETL load_to_postgres completed successfully.")

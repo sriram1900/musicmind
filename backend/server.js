@@ -42,13 +42,15 @@ console.log('---------------------');
 
 // 4. Middlewares (Global)
 app.set('trust proxy', 1);
+
 app.use(cookieSession({
-    name: 'musicmind-session-v2',
-    keys: [process.env.COOKIE_KEY || 'default_secret_key_change_me'],
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: false,
-    httpOnly: true,
-    sameSite: 'lax'
+  name: 'musicmind-session-v2',
+  keys: [process.env.COOKIE_KEY || 'default_secret_key_change_me'],
+  maxAge: 24 * 60 * 60 * 1000,
+
+  secure: true,        // HTTPS on Render
+  httpOnly: true,
+  sameSite: 'none'     // cross-domain frontend
 }));
 
 // Ensure FRONTEND_URL has protocol (Render provides 'host' property without https://)
@@ -319,27 +321,43 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
         } catch (e) {
             console.error('Audio Features warning:', e.message);
         }
+const analyticsData = {
+    topGenres,
+    moodScore,
+    topTracks: tracksRes.data.items.slice(0, 5).map(t => ({
+        name: t.name,
+        artist: t.artists[0].name,
+        image: t.album.images[0]?.url,
+        preview: t.preview_url
+    })),
+    generatedAt: new Date().toISOString()
+};
 
-        const analyticsData = {
-            topGenres,
-            moodScore,
-            topTracks: tracksRes.data.items.slice(0, 5).map(t => ({
-                name: t.name,
-                artist: t.artists[0].name,
-                image: t.album.images[0]?.url,
-                preview: t.preview_url
-            })),
-            generatedAt: new Date().toISOString()
-        };
+const topTracks = analyticsData.topTracks;
 
-        // Async save to DB
-        const meRes = await axios.get('https://api.spotify.com/v1/me', { headers });
-        analyticsService.saveAnalytics(meRes.data.id, analyticsData).catch(e => console.error('DB Save Error:', e));
+// Async save to DB
+const meRes = await axios.get('https://api.spotify.com/v1/me', { headers });
+analyticsService.saveAnalytics(meRes.data.id, analyticsData)
+  .catch(e => console.error('DB Save Error:', e));
 
-        // 2. Set Cache (1 hour)
-        await cacheService.set(cacheKey, analyticsData, 3600);
+// Cache (1 hour)
+await cacheService.set(cacheKey, analyticsData, 3600);
 
-        res.json(analyticsData);
+// Transform genres for frontend
+const total = topGenres.reduce((sum, g) => sum + g.count, 0);
+
+const genres = topGenres.map(g => ({
+  name: g.genre,
+  percent: total > 0 ? Math.round((g.count / total) * 100) : 0
+}));
+
+res.json({
+  genres,
+  moodScore,
+  topTracks,
+  generatedAt: analyticsData.generatedAt
+});
+
     } catch (error) {
         console.error('Dashboard Error:', error.message);
         res.status(500).json({ error: error.message });
