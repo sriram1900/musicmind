@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    {
+      "track_id": "spotify_track_id",
+      "track_name": "Save Your Tears",
+      "artist_name": "The Weeknd",
+      "score": 0.91,
+      "reason": "audio_feature_similarity"
+    }
+  ]
+}
