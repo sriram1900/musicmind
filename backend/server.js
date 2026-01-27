@@ -341,7 +341,19 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
         // 2. Set Cache (1 hour)
         await cacheService.set(cacheKey, analyticsData, 3600);
 
-        res.json(analyticsData);
+const total = topGenres.reduce((sum, g) => sum + g.count, 0);
+
+const genres = topGenres.map(g => ({
+  name: g.genre,
+  percent: total > 0 ? Math.round((g.count / total) * 100) : 0
+}));
+
+res.json({
+  genres,        // 👈 frontend wants THIS
+  moodScore,
+  topTracks,
+  generatedAt
+});
     } catch (error) {
         console.error('Dashboard Error:', error.message);
         res.status(500).json({ error: error.message });
