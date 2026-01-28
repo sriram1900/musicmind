@@ -175,4 +175,4 @@ Please follow existing code style and update docs in `/docs` when changing API c
 ---
 
 ## License
-Specify your project license here (e.g., MIT) or add LICENSE file to the repo.
+
