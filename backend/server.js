@@ -47,9 +47,9 @@ app.use(cookieSession({
   name: 'musicmind-session-v2',
   keys: [process.env.COOKIE_KEY || 'default_secret_key_change_me'],
   maxAge: 24 * 60 * 60 * 1000,
-  secure: true,
+  secure: process.env.NODE_ENV === 'production',
   httpOnly: true,
-  sameSite: 'none'
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
 }));
 
 app.use(cors({
@@ -59,7 +59,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// ---------------- AUTH ----------------
+// ---------------- AUTH MIDDLEWARE ----------------
 async function checkAuth(req, res, next) {
   if (!req.session || !req.session.access_token) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -143,6 +143,14 @@ app.get('/callback', async (req, res) => {
   }
 });
 
+// ---------------- LOGOUT ----------------
+app.get('/logout', (req, res) => {
+  req.session = null;
+  res.redirect(frontendUrl);
+});
+
+app.get('/auth/logout', (req, res) => res.redirect('/logout'));
+
 // ---------------- USER PROFILE ----------------
 app.get('/api/user/profile', checkAuth, async (req, res) => {
   const meRes = await axios.get('https://api.spotify.com/v1/me', {
@@ -150,7 +158,6 @@ app.get('/api/user/profile', checkAuth, async (req, res) => {
   });
 
   const cacheKey = `profile:user:${meRes.data.id}`;
-
   const cached = await cache.get(cacheKey);
   if (cached) return res.json(cached);
 
@@ -158,7 +165,7 @@ app.get('/api/user/profile', checkAuth, async (req, res) => {
   res.json(meRes.data);
 });
 
-// ---------------- ANALYTICS (REDIS CORE) ----------------
+// ---------------- ANALYTICS ----------------
 app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
   try {
     const headers = { Authorization: `Bearer ${req.session.access_token}` };
@@ -168,10 +175,7 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
     const cacheKey = `dashboard:user:${userId}`;
 
     const cached = await cache.get(cacheKey);
-    if (cached) {
-      console.log('⚡ Using Cached Dashboard');
-      return res.json(cached);
-    }
+    if (cached) return res.json(cached);
 
     const [artistsRes, tracksRes] = await Promise.all([
       axios.get('https://api.spotify.com/v1/me/top/artists?limit=50&time_range=long_term', { headers }),
@@ -206,8 +210,7 @@ app.get('/api/analytics/dashboard', checkAuth, async (req, res) => {
     await cache.set(cacheKey, analyticsData, 600);
 
     res.json(analyticsData);
-  } catch (err) {
-    console.error('Analytics Error:', err.message);
+  } catch {
     res.status(500).json({ error: 'Failed to generate analytics' });
   }
 });
@@ -227,17 +230,11 @@ app.get('/friends/search', checkAuth, async (req, res) => {
   });
   res.json(await friendService.searchUsers(req.query.q, me.data.id));
 });
-// ---------------- ROOT / HEALTH ----------------
-app.get('/', (req, res) => {
-  res.status(200).json({
-    service: 'MusicMind Backend',
-    status: 'running',
-    version: '1.0.0',
-    docs: '/api-docs',
-    login: '/login'
-  });
-});
 
+// ---------------- HEALTH ----------------
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // ---------------- START ----------------
 app.listen(PORT, () => {
