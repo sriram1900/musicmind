@@ -5,7 +5,6 @@ const db = require('../db');
  * Uses: user_history, song_artists, artist_genres
  */
 async function computeAnalytics(userId) {
-  // 1. Top Genres
   const topGenresQuery = `
     SELECT g.genre, COUNT(*) AS count
     FROM user_history uh
@@ -21,9 +20,7 @@ async function computeAnalytics(userId) {
   const topGenresRes = await db.query(topGenresQuery, [userId]);
   const topGenres = topGenresRes.rows;
 
-  // 2. Mood Score (TEMPORARY simple logic)
-  // Since audio_features are not yet stored in DB,
-  // we compute a neutral score for now.
+  // Temporary neutral mood score
   const moodScore = 50;
 
   return {
@@ -33,7 +30,7 @@ async function computeAnalytics(userId) {
 }
 
 /**
- * Save analytics snapshot (optional caching)
+ * Save analytics snapshot
  */
 async function saveAnalytics(userId, analytics) {
   const { topGenres, moodScore } = analytics;
