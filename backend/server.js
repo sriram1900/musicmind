@@ -5,7 +5,6 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const cookieSession = require('cookie-session');
-const rateLimit = require('express-rate-limit');
 
 const { cache } = require('./services/cacheService');
 const userService = require('./services/userService');
